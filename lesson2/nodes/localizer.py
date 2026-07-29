@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import math
-from automotive_platform_msgs import msg
 import rospy
 
 from tf.transformations import quaternion_from_euler
@@ -45,7 +44,7 @@ class Localizer:
         utm_y -= self.origin_y
 
         azimuth_correction = self.utm_projection.get_factors(msg.longitude, msg.latitude).meridian_convergence
-        yaw = self.convert_azimuth_to_yaw(math.radians(azimuth_correction))
+        yaw = self.convert_azimuth_to_yaw(math.radians(msg.azimuth - azimuth_correction))
         x, y, z, w = quaternion_from_euler(0, 0, yaw)
         orientation = Quaternion(x, y, z, w)
 
