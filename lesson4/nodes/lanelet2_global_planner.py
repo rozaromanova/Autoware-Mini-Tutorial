@@ -136,6 +136,7 @@ class GlobalPlanner:
         last_lanelet = laneletseq[-1]
         last_lanelet_start = len(waypoints) - len(last_lanelet.centerline)
 
+        closest_index = last_lanelet_start
         closest_distance = float('inf')
 
         for i in range(last_lanelet_start, len(waypoints)):
@@ -146,6 +147,9 @@ class GlobalPlanner:
 
             if distance < closest_distance:
                 closest_distance = distance
+                closest_index = i
+
+        waypoints = waypoints[:closest_index + 1]
 
         # Make the goal match the final waypoint
         last_waypoint = waypoints[-1]
