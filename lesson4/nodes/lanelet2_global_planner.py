@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-from importlib.resources import path
-
 import numpy as np
 import rospy
 from threading import Lock
@@ -115,6 +113,7 @@ class GlobalPlanner:
         # Convert the lanelet sequence to a list of Waypoints
 
         for j, lanelet in enumerate(laneletseq):
+
             # Get speed from lanelet attribute or use global speed limit.
             if 'speed_ref' in lanelet.attributes:
                 speed = float(lanelet.attributes['speed_ref']) / 3.6
@@ -133,23 +132,26 @@ class GlobalPlanner:
                 waypoint.speed = speed
                 waypoints.append(waypoint)
 
-        # Find the waypoint closest to the requested goal.
-        distances = [
-            np.hypot(
-                waypoint.position.x - self.goal_point.x,
-                waypoint.position.y - self.goal_point.y
+       # Search only within the last lanelet.
+        last_lanelet = laneletseq[-1]
+        last_lanelet_start = len(waypoints) - len(last_lanelet.centerline)
+
+        closest_index = last_lanelet_start
+        closest_distance = float('inf')
+
+        for i in range(last_lanelet_start, len(waypoints)):
+            distance = np.hypot(
+                waypoints[i].position.x - self.goal_point.x,
+                waypoints[i].position.y - self.goal_point.y
             )
-            for waypoint in waypoints
-        ]
 
-        closest_index = np.argmin(distances)
+            if distance < closest_distance:
+                closest_distance = distance
+                closest_index = i
 
-        # Remove all waypoints after the closest waypoint.
         waypoints = waypoints[:closest_index + 1]
 
-        # Make the goal match the final waypoint exactly.
-        last_waypoint = waypoints[-1]
-        self.goal_point = BasicPoint2d(last_waypoint.position.x, last_waypoint.position.y)
+        self.goal_point = BasicPoint2d(waypoints[-1].position.x, waypoints[-1].position.y)
 
         return waypoints
 
