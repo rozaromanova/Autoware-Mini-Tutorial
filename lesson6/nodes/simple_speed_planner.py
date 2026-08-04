@@ -80,23 +80,18 @@ class SimpleSpeedPlanner:
             collision_point_braking_distances = collision_points["distance_to_stop"]
             ego_distance_from_path_start = local_path_linestring.project(current_position)
 
-            # TODO 3: Add braking safety distance.
+            # Add braking safety distance.
             target_distances = collision_point_distances - ego_distance_from_path_start - self.distance_to_car_front - collision_point_braking_distances
             target_distances = np.maximum(target_distances, 0.0)
 
-            # TODO 4: Calculate collision point speed.
+            # Calculate collision point speed.
             collision_point_path_headings = [self.get_heading_at_distance(local_path_linestring, d) for d in collision_point_distances]
             collision_point_speeds = np.array([
                 self.project_vector_to_heading(heading, Vector3(vx, vy, vz))
                 for heading, (vx, vy, vz) in zip(collision_point_path_headings, collision_points[['vx', 'vy', 'vz']])
             ])
 
-            for heading, (vx, vy, vz), speed in zip(collision_point_path_headings, collision_points[['vx', 'vy', 'vz']], collision_point_speeds):
-                object_speed = math.sqrt(vx * vx + vy * vy + vz * vz)
-                projected_speed = float(speed)
-                print(f"object speed: {object_speed:.2f} m/s, projected speed: {projected_speed:.2f} m/s")
-
-            # TODO 5: Account for collision point speed in target velocity.
+            # ccount for collision point speed in target velocity.
             approaching_speeds = np.minimum(collision_point_speeds, 0.0)
             calculated_target_velocities = np.maximum(
                 0.0,
