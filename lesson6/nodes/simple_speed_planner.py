@@ -77,38 +77,53 @@ class SimpleSpeedPlanner:
             # Project collision points onto the local path to get distances
             collision_points_shapely = shapely.points(structured_to_unstructured(collision_points[['x', 'y', 'z']]))
             collision_point_distances = np.array([local_path_linestring.project(cp) for cp in collision_points_shapely])
-
-            # TODO 2: Calculate target velocity and modify the local path waypoint speeds.
-            #         - Calculate target velocity for each collision point using:
-            #           v = sqrt(2 * default_deceleration * distance)
-            #         - Find the minimum target velocity
-            #         - Overwrite waypoint speeds: wp.speed = min(target_velocity, wp.speed)
+            collision_point_braking_distances = collision_points["distance_to_stop"]
+            ego_distance_from_path_start = local_path_linestring.project(current_position)
 
             # TODO 3: Add braking safety distance.
-            #         - Subtract distance_to_car_front from collision_point_distances
-            #         - Subtract distance_to_stop (from collision points) from distances
-            #         - Update target_object_distance and stopping_point_distance accordingly
+            target_distances = collision_point_distances - ego_distance_from_path_start - self.distance_to_car_front - collision_point_braking_distances
+            target_distances = np.maximum(target_distances, 0.0)
 
             # TODO 4: Calculate collision point speed.
-            #         - For each collision point, get the path heading at that distance
-            #           using get_heading_at_distance()
-            #         - Project the collision point velocity onto the heading using
-            #           project_vector_to_heading()
+            collision_point_path_headings = [self.get_heading_at_distance(local_path_linestring, d) for d in collision_point_distances]
+            collision_point_speeds = np.array([
+                self.project_vector_to_heading(heading, Vector3(vx, vy, vz))
+                for heading, (vx, vy, vz) in zip(collision_point_path_headings, collision_points[['vx', 'vy', 'vz']])
+            ])
 
-            # TODO 6: Modify target velocity with reaction time.
-            #         - Subtract braking_reaction_time * abs(collision_point_speeds)
-            #           from target distances
+            for heading, (vx, vy, vz), speed in zip(collision_point_path_headings, collision_points[['vx', 'vy', 'vz']], collision_point_speeds):
+                object_speed = math.sqrt(vx * vx + vy * vy + vz * vz)
+                projected_speed = float(speed)
+                print(f"object speed: {object_speed:.2f} m/s, projected speed: {projected_speed:.2f} m/s")
 
             # TODO 5: Account for collision point speed in target velocity.
-            #         - Use full formula: v = max(0, approaching_speed + sqrt(max(0, v0^2 + 2*a*s)))
-            #           where approaching_speed = min(v0, 0) handles objects moving toward us
-            #         - Find the collision point with the minimum target velocity (not just closest)
-            #         - Set target_object_speed from the collision point speeds
+            approaching_speeds = np.minimum(collision_point_speeds, 0.0)
+            calculated_target_velocities = np.maximum(
+                0.0,
+                approaching_speeds + np.sqrt(np.maximum(0.0, collision_point_speeds ** 2 + 2 * self.default_deceleration * target_distances)),
+            )
 
-            # Publishing the modified local path goes below all the TODOs.
-            # In TODO 2, create the modified Path message here and pass it to
-            # self.publish_local_path() together with the calculated metadata;
-            # the later TODOs only refine these values.
+            target_velocity = np.min(calculated_target_velocities)
+            for wp in local_path_msg.waypoints:
+                wp.speed = min(target_velocity, wp.speed)
+
+            collision_point_index = np.argmin(calculated_target_velocities)
+            target_object_distance = collision_point_distances[collision_point_index] - ego_distance_from_path_start - self.distance_to_car_front
+            target_object_speed = collision_point_speeds[collision_point_index]
+            collision_point_category = collision_points[collision_point_index]["category"]
+            stopping_point_distance = collision_point_distances[collision_point_index] - ego_distance_from_path_start - collision_point_braking_distances[collision_point_index]
+
+            path = Path()
+            path.header = local_path_msg.header
+            path.waypoints = local_path_msg.waypoints
+            self.publish_local_path(
+                path,
+                target_object_distance=target_object_distance,
+                target_object_speed=target_object_speed,
+                stopping_point_distance=stopping_point_distance,
+                collision_point_category=collision_point_category,
+                is_blocked=True,
+            )
 
         except Exception as e:
             rospy.logerr_throttle(10, "%s - Exception in callback: %s", rospy.get_name(), traceback.format_exc())
