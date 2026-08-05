@@ -80,7 +80,7 @@ class SimpleSpeedPlanner:
             collision_point_braking_distances = collision_points["distance_to_stop"]
 
             # Add braking safety distance.
-            target_distances = collision_point_distances - self.distance_to_car_front - collision_point_braking_distances - self.braking_reaction_time * current_speed
+            target_distances = collision_point_distances - self.distance_to_car_front - collision_point_braking_distances - self.braking_reaction_time * abs(collision_point_speeds)
             target_distances = np.maximum(target_distances, 0.0)
 
             # Calculate collision point speed.
