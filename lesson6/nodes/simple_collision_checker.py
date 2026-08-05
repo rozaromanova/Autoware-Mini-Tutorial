@@ -8,7 +8,7 @@ import threading
 from ros_numpy import msgify
 from lanelet2.io import Origin, load
 from lanelet2.projection import UtmProjector
-from autoware_mini.msg import Path, DetectedObjectArray, StopLineStatusArray
+from autoware_mini.msg import Path, DetectedObjectArray, StopLineStatus, StopLineStatusArray
 from sensor_msgs.msg import PointCloud2
 
 # Collision point categories: 0 = none, 1 = goal, 2 = traffic light, 3 = static obstacle, 4 = moving obstacle
@@ -144,7 +144,7 @@ class SimpleCollisionChecker:
 
         # Add stop line collision points for red/yellow traffic lights on the local path
         for stop_line_id, status in stopline_statuses.items():
-            if status != StopLineStatusArray.STATUS_STOP:
+            if status != StopLineStatus.STATUS_STOP:
                 continue
 
             stop_line = self.stop_lines.get(stop_line_id)
