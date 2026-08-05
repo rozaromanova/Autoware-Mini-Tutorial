@@ -173,17 +173,30 @@ class YoloTrafficLightDetector:
 
         if stop_line_ids_on_path:
 
-            # TODO 2: Extract the transform between transform_to_frame and transform_from_frame
-            #         at image_time_stamp using self.tf_buffer, then calculate the map ROIs:
+            # Extract the transform from the map frame to the camera frame at the time of the image
+            try:
+                transform = self.tf_buffer.lookup_transform(
+                    target_frame=transform_to_frame,
+                    source_frame=transform_from_frame,
+                    time=image_time_stamp,
+                    timeout=rospy.Duration(self.transform_timeout)
+                )
+            except (tf2_ros.TransformException, rospy.ROSTimeMovedBackwardsException) as e:
+                rospy.logwarn("%s - %s", rospy.get_name(), e)
+                return
+            map_rois = self.calculate_roi_coordinates(stop_line_ids_on_path, transform)
 
             if map_rois:
                 # TODO 4: Run the YOLO model on the image to get yolo_rois, classes and scores,
                 #         then match them with map_rois:
                 pass
-
+        print("Map ROIs:", map_rois)
+        
         self.tfl_status_pub.publish(tfl_status)
 
         self.publish_roi_images(image, map_rois, yolo_rois, match_dict, image_time_stamp)
+
+
 
     def calculate_roi_coordinates(self, stop_line_ids_on_path, transform):
         rois = []
@@ -196,10 +209,13 @@ class YoloTrafficLightDetector:
                 for x, y, z in traffic_light_coords:
                     point_map = Point(x=x, y=y, z=z)
 
-                    # TODO 3: Transform point_map to the camera frame (point_camera),
-                    #         project it to pixel coordinates (u, v) using the camera model
-                    #         and break out of the loop if the point is outside the image
-                    #         or behind the camera.
+                    # Transform the traffic light corner point from the map frame to the camera frame
+                    point_camera = do_transform_point(PointStamped(point=point_map), transform).point
+                    u, v = self.camera_model.project3dToPixel((point_camera.x, point_camera.y, point_camera.z))
+
+                    # Check if the projected point is in front of the camera and within the image bounds
+                    if point_camera.z <= 0 or u < 0 or u >= self.camera_model.width or v < 0 or v >= self.camera_model.height:
+                        break
 
                     # convert the extent in meters to extent in pixels
                     extent_x_px = self.camera_model.fx() * self.roi_width_extent / point_camera.z
