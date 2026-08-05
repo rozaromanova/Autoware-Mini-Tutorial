@@ -78,10 +78,9 @@ class SimpleSpeedPlanner:
             collision_points_shapely = shapely.points(structured_to_unstructured(collision_points[['x', 'y', 'z']]))
             collision_point_distances = np.array([local_path_linestring.project(cp) for cp in collision_points_shapely])
             collision_point_braking_distances = collision_points["distance_to_stop"]
-            ego_distance_from_path_start = local_path_linestring.project(current_position)
 
             # Add braking safety distance.
-            target_distances = collision_point_distances - ego_distance_from_path_start - self.distance_to_car_front - collision_point_braking_distances
+            target_distances = collision_point_distances - self.distance_to_car_front - collision_point_braking_distances - self.braking_reaction_time * current_speed
             target_distances = np.maximum(target_distances, 0.0)
 
             # Calculate collision point speed.
@@ -91,7 +90,7 @@ class SimpleSpeedPlanner:
                 for heading, (vx, vy, vz) in zip(collision_point_path_headings, collision_points[['vx', 'vy', 'vz']])
             ])
 
-            # ccount for collision point speed in target velocity.
+            # Account for collision point speed in target velocity.
             approaching_speeds = np.minimum(collision_point_speeds, 0.0)
             calculated_target_velocities = np.maximum(
                 0.0,
@@ -103,10 +102,10 @@ class SimpleSpeedPlanner:
                 wp.speed = min(target_velocity, wp.speed)
 
             collision_point_index = np.argmin(calculated_target_velocities)
-            target_object_distance = collision_point_distances[collision_point_index] - ego_distance_from_path_start - self.distance_to_car_front
+            target_object_distance = collision_point_distances[collision_point_index] - self.distance_to_car_front
             target_object_speed = collision_point_speeds[collision_point_index]
             collision_point_category = collision_points[collision_point_index]["category"]
-            stopping_point_distance = collision_point_distances[collision_point_index] - ego_distance_from_path_start - collision_point_braking_distances[collision_point_index]
+            stopping_point_distance = collision_point_distances[collision_point_index] - collision_point_braking_distances[collision_point_index]
 
             path = Path()
             path.header = local_path_msg.header
