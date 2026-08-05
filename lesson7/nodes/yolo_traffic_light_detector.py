@@ -132,8 +132,6 @@ class YoloTrafficLightDetector:
                 if local_path_linestring.intersects(stop_line):
                     stop_line_ids_on_path.append(stop_line_id)
 
-        print("Stop line IDs on path:", stop_line_ids_on_path)
-
         with self.lock:
             self.stop_line_ids_on_path = stop_line_ids_on_path
             self.transform_from_frame = local_path_msg.header.frame_id
