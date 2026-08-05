@@ -119,9 +119,9 @@ class SimpleCollisionChecker:
                     intersection_points = shapely.get_coordinates(intersection_geometry)
 
                     speed = math.sqrt(obj.velocity.x ** 2 + obj.velocity.y ** 2 + obj.velocity.z ** 2)
+                    category = 4 if speed > self.stopped_speed_limit else 3
 
-                    for x, y in intersection_points:
-                        category = 4 if speed > self.stopped_speed_limit else 3
+                    for x, y in intersection_points:                        
                         collision_points = np.append(
                             collision_points,
                             np.array(
