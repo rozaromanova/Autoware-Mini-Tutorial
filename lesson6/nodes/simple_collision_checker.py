@@ -119,11 +119,13 @@ class SimpleCollisionChecker:
                     intersection_points = shapely.get_coordinates(intersection_geometry)
 
                     for x, y in intersection_points:
+                        speed = math.sqrt(obj.velocity.x ** 2 + obj.velocity.y ** 2 + obj.velocity.z ** 2)
+                        category = 4 if speed > self.stopped_speed_limit else 3
                         collision_points = np.append(
                             collision_points,
                             np.array(
-                                [(x, y, 0.0, obj.velocity.x, obj.velocity.y, 0.0,
-                                  self.braking_safety_distance_obstacle, np.inf, 3)],
+                                [(x, y, obj.centroid.z, obj.velocity.x, obj.velocity.y, obj.velocity.z,
+                                  self.braking_safety_distance_obstacle, np.inf, category)],
                                 dtype=DTYPE,
                             ),
                         )
@@ -176,8 +178,7 @@ class SimpleCollisionChecker:
         self.collision_points_pub.publish(collision_points_msg)
 
     def traffic_light_status_callback(self, msg):
-        with self.lock:
-            self.stopline_statuses = {status.stop_line_id: status.status for status in msg.statuses}
+        self.stopline_statuses = {status.stop_line_id: status.status for status in msg.statuses}
 
     @staticmethod
     def get_traffic_light_stop_lines(lanelet2_map):
