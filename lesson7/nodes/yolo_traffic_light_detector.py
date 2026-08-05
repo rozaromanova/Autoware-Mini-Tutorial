@@ -124,9 +124,15 @@ class YoloTrafficLightDetector:
         # used in calculate_roi_coordinates to filter out only relevant traffic lights
         stop_line_ids_on_path = []
 
-        # TODO 1: If the local path has waypoints, create a shapely LineString from them
-        #         and collect the ids of the stop lines that intersect with it
-        #         into stop_line_ids_on_path.
+        # Create a Shapely LineString from the local path waypoints
+        if len(local_path_msg.waypoints) > 0:
+            local_path_linestring = shapely.geometry.LineString([(wp.position.x, wp.position.y) for wp in local_path_msg.waypoints])
+
+            for stop_line_id, stop_line in self.stop_lines.items():
+                if local_path_linestring.intersects(stop_line):
+                    stop_line_ids_on_path.append(stop_line_id)
+
+        print("Stop line IDs on path:", stop_line_ids_on_path)
 
         with self.lock:
             self.stop_line_ids_on_path = stop_line_ids_on_path
