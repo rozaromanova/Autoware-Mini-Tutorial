@@ -157,9 +157,6 @@ class SimpleCollisionChecker:
                 continue
 
             intersection_coords = shapely.get_coordinates(intersection_geometry)
-            if len(intersection_coords) == 0:
-                continue
-
             x, y = intersection_coords[0]
             collision_points = np.append(
                 collision_points,
