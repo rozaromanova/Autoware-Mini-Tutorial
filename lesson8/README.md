@@ -66,10 +66,17 @@ Your framework from the previous lessons is a simplified one. Remember all limit
 5. Commit and push everything, and be ready to demonstrate your failure cases at the practice session
 
 ##### Failure case 1
-...
+- Scenario: create a deadlock by placing two actors so the ego vehicle is blocked from moving while no one yields, for example a stuck vehicle in front and a second vehicle waiting in the only available gap.
+- Failure mode: the simplified stack may not have a recovery behavior for a blocked path, so it can stall indefinitely or oscillate without resolving the deadlock.
+- Fix idea: add blockage detection and a deadlock recovery strategy that can reroute, back up, or request a reassignment when the current path is blocked.
 
 ##### Failure case 2
-...
+- Scenario: place a slower NPC car ahead on the route and have it brake suddenly in front of the vehicle.
+- Failure mode: the pure pursuit follower keeps tracking the original path and cannot react smoothly to a stopped or abruptly slowing lead vehicle, causing a rear-end collision or unsafe overshoot.
+- Fix idea: add latitudal planning and dynamic obstacle-aware motion planning so the stack can slow down and follow traffic safely.
 
 ##### Failure case 3
-...
+- Scenario: reroute an NPC vehicle through the intersection while the ego vehicle must turn left, or trigger a traffic light change so oncoming traffic appears at the same time.
+- Failure mode: the planner may not reason about gap acceptance and can either execute the turn too aggressively or stall without a proper yield decision.
+- Fix idea: add behavioral decision-making for intersections and a route planning layer that explicitly handles yielding and conflict resolution.
+
